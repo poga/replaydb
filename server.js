@@ -11,6 +11,9 @@ function server (archive) {
 
   const consumer = kafka.Consumer(archive)
   const producer = kafka.Producer(archive)
+  producer.on('flush', (size, topic) => {
+    console.log('flushed', topic, size)
+  })
 
   app.get('/:topic/:offset', function (req, res, next) {
     consumer.get(req.params.topic, req.params.offset, (err, message) => {
