@@ -4,28 +4,85 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const events = require('events')
 const inherits = require('inherits')
+const assert = require('assert')
+const jsonpatch = require('fast-json-patch')
+const path = require('path')
+const mkdirp = require('mkdirp')
 
-function ReplayDB (path) {
-  if (!(this instanceof ReplayDB)) return new ReplayDB(path)
+function ReplayDB (storage, key) {
+  if (!(this instanceof ReplayDB)) return new ReplayDB(path, key)
   events.EventEmitter.call(this)
 
-  this.path = path
-  this.feed = hypercore(path)
+  this.path = storage
   this.buffer = new Buffer(0)
   this.flush = _.debounce(this.flushNow, 1000, {maxWait: 5000})
   this.ready = false
+  this.metadatakey = key
+  this.metadataFeed = hypercore(this.metadataPath(), key)
+  this.metadata = {} // aggregated matadata JSON
+  this.feedKey = undefined
+  this.feed = undefined
 }
 
 inherits(ReplayDB, events.EventEmitter)
 
+ReplayDB.prototype.metadataPath = function () {
+  return path.join(this.path, '.metadata')
+}
+
+ReplayDB.prototype.dbPath = function () {
+  return this.path
+}
+
 ReplayDB.prototype.open = function (cb) {
-  this.feed.on('ready', () => {
-    this.ready = true
+  var self = this
+  mkdirp(this.metadataPath(), function () { self.metadataFeed.ready(ready) })
+
+  function ready () {
+    console.log('ready', self.metadataFeed.length, self.metadataFeed.writable)
+    self.metadataFeed.on('error', (err) => { self.emit('metadata error', err) })
+    if (self.metadataFeed.length === 0 && self.metadataFeed.writable) return init(cb)
+
+    readMetadata()
+  }
+
+  self.once('metadata', function (metadata) {
+    self.ready = true
+    cb()
+  })
+
+  function readMetadata () {
+    console.log('reading metadata')
+    var rs = self.metadataFeed.createReadStream({live: true})
+    var i = 0
+    rs.on('data', patches => {
+      var p = JSON.parse(patches)
+      jsonpatch.apply(self.metadata, p)
+      i += 1
+      console.log('read', p, i)
+      if (i === self.metadataFeed.length) self.emit('metadata', self.metadata)
+    })
+  }
+
+  function init (cb) {
+    console.log('init')
+    self.setMetadata({key: self.metadataFeed.key.toString('hex')}, cb)
+  }
+}
+
+ReplayDB.prototype.setMetadata = function (meta, cb) {
+  console.log('setting metadata', meta)
+  var diff = jsonpatch.compare(this.metadata, meta)
+  this.metadataFeed.append(JSON.stringify(diff), err => {
+    if (err) return cb(err)
+    this.metadata = meta
+    console.log('done', err, this.metadata, cb)
     cb()
   })
 }
 
 ReplayDB.prototype.append = function (object) {
+  this._checkReady()
   this.buffer = Buffer.concat([this.buffer, new Buffer(JSON.stringify(object) + '\n')])
   this.flush()
 }
@@ -43,6 +100,8 @@ ReplayDB.prototype.flushNow = function () {
 }
 
 ReplayDB.prototype.server = function (cb) {
+  this._checkReady()
+
   var app = this.app = express()
   var self = this
   require('express-ws')(app)
@@ -73,6 +132,10 @@ ReplayDB.prototype.server = function (cb) {
   })
 
   return app
+}
+
+ReplayDB.prototype._checkReady = function () {
+  assert(this.ready, 'DB not ready. call open() before use')
 }
 
 module.exports = ReplayDB
