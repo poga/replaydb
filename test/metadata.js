@@ -9,7 +9,7 @@ tape('init metadata', function (t) {
   db.open(test)
 
   function test () {
-    t.ok(db.metadata.key, 'metadata should be inited')
+    t.same(db.metadata.feed, db.feed.key.toString('hex'), 'metadata should be inited')
     dir.removeCallback()
     t.end()
   }
@@ -24,6 +24,7 @@ tape('read metadata', function (t) {
     var db2 = new DB(dir.name)
     db2.open(function () {
       t.same(db2.metadata, db.metadata, 'read metadata after open')
+      t.same(db2.feed.key, db.feed.key)
       dir.removeCallback()
       t.end()
     })
@@ -36,9 +37,10 @@ tape('update metadata', function (t) {
   db.open(test)
 
   function test () {
+    console.log('test')
     db.setMetadata(Object.assign({}, db.metadata, {foo: 'bar'}), function (err) {
       t.error(err)
-      t.same(db.metadata, {key: db.metadataFeed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
+      t.same(db.metadata, {feed: db.feed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
       dir.removeCallback()
       t.end()
     })
@@ -51,11 +53,11 @@ tape('emit metadata event', function (t) {
   var i = 0
   db.on('metadata', (meta) => {
     if (i === 0) {
-      t.same(meta, {key: db.metadataFeed.key.toString('hex')}, 'first metadata event')
+      t.same(meta, {feed: db.feed.key.toString('hex')}, 'first metadata event')
       i++
     } else {
       t.same(meta, {
-        key: db.metadataFeed.key.toString('hex'),
+        feed: db.feed.key.toString('hex'),
         foo: 'bar'
       }, 'second metadata event')
       t.end()
@@ -66,7 +68,7 @@ tape('emit metadata event', function (t) {
   function test () {
     db.setMetadata(Object.assign({}, db.metadata, {foo: 'bar'}), function (err) {
       t.error(err)
-      t.same(db.metadata, {key: db.metadataFeed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
+      t.same(db.metadata, {feed: db.feed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
     })
   }
 })
@@ -93,7 +95,7 @@ tape('update metadata & replicate', function (t) {
 
     clone.on('metadata', (metadata) => {
       console.log(metadata)
-      t.same(db.metadata, {key: db.metadataFeed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
+      t.same(db.metadata, {feed: db.feed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
       dir.removeCallback()
       t.end()
     })
