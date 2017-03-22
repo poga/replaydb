@@ -9,13 +9,21 @@ const jsonpatch = require('fast-json-patch')
 const path = require('path')
 const mkdirp = require('mkdirp')
 
-function ReplayDB (storage, key) {
-  if (!(this instanceof ReplayDB)) return new ReplayDB(path, key)
+const DEFAULT_OPTS = {wait: 1000, maxWait: 5000}
+
+function ReplayDB (storage, key, opts) {
+  if (!(this instanceof ReplayDB)) return new ReplayDB(path, key, opts)
+
+  if (!opts && key && !Buffer.isBuffer(key) && typeof key === 'object') {
+    opts = key
+    key = null
+  }
+  opts = Object.assign({}, DEFAULT_OPTS, opts)
   events.EventEmitter.call(this)
 
   this.path = storage
   this.buffer = new Buffer(0)
-  this.flush = _.debounce(this.flushNow, 1000, {maxWait: 5000})
+  this.flush = _.debounce(this.flushNow, opts.wait, {maxWait: opts.maxWait})
   this.ready = false
   this.metadatakey = key
   this.metadataFeed = hypercore(this.metadataPath(), key)
