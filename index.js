@@ -13,9 +13,17 @@ function ReplayDB (path) {
   this.feed = hypercore(path)
   this.buffer = new Buffer(0)
   this.flush = _.debounce(this.flushNow, 1000, {maxWait: 5000})
+  this.ready = false
 }
 
 inherits(ReplayDB, events.EventEmitter)
+
+ReplayDB.prototype.open = function (cb) {
+  this.feed.on('ready', () => {
+    this.ready = true
+    cb()
+  })
+}
 
 ReplayDB.prototype.append = function (object) {
   this.buffer = Buffer.concat([this.buffer, new Buffer(JSON.stringify(object) + '\n')])

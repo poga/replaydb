@@ -12,7 +12,7 @@ mkdirp(dbPath, function (err) {
   var db = new ReplayDB(dbPath)
   var app = db.server()
   var port = argv.port || 8080
-  db.feed.on('ready', () => {
+  db.open(function () {
     console.log('key', db.feed.key.toString('hex'))
     swarm(db.feed, {live: true})
   })
