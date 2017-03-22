@@ -35,7 +35,9 @@ ReplayDB.prototype.flushNow = function () {
   var temp = Buffer.from(this.buffer)
   this.buffer = new Buffer(0)
   this.feed.append(temp, (err) => {
-    if (err) throw err
+    if (err) return this.emit('error', err)
+
+    this.emit('flush', temp)
     console.log('append done')
   })
 }
@@ -53,7 +55,16 @@ ReplayDB.prototype.server = function (cb) {
   })
 
   app.ws('/live/:topic', function (ws, res) {
-
+    console.log('live')
+    var listener = (data) => {
+      console.log('live', data.length)
+      ws.send(data)
+    }
+    self.on('flush', listener)
+    ws.on('close', () => {
+      console.log('close')
+      self.removeListener('flush', listener)
+    })
   })
 
   app.use(function (err, req, res, next) {
