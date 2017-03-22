@@ -60,24 +60,27 @@ ReplayDB.prototype.open = function (cb) {
       jsonpatch.apply(self.metadata, p)
       i += 1
       console.log('read', p, i)
+      console.log('emitting metadata', self.metadata)
       if (i === self.metadataFeed.length) self.emit('metadata', self.metadata)
     })
   }
 
   function init (cb) {
     console.log('init')
-    self.setMetadata({key: self.metadataFeed.key.toString('hex')}, cb)
+    readMetadata()
+    self.setMetadata({key: self.metadataFeed.key.toString('hex')}, err => {
+      if (err) return cb(err)
+    })
   }
 }
 
 ReplayDB.prototype.setMetadata = function (meta, cb) {
-  console.log('setting metadata', meta)
+  console.log('setting metadata', meta, cb)
   var diff = jsonpatch.compare(this.metadata, meta)
   this.metadataFeed.append(JSON.stringify(diff), err => {
     if (err) return cb(err)
-    this.metadata = meta
-    console.log('done', err, this.metadata, cb)
-    cb()
+    this.once('metadata', (metadata) => { cb(null, metadata) })
+    console.log('done', err, this.metadata)
   })
 }
 

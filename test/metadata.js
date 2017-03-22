@@ -38,9 +38,35 @@ tape('update metadata', function (t) {
   function test () {
     db.setMetadata(Object.assign({}, db.metadata, {foo: 'bar'}), function (err) {
       t.error(err)
-      t.same(db.metadata, {key: db.metadata.key.toString('hex'), foo: 'bar'}, 'metadata updated')
+      t.same(db.metadata, {key: db.metadataFeed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
       dir.removeCallback()
       t.end()
+    })
+  }
+})
+
+tape('emit metadata event', function (t) {
+  var dir = tmp.dirSync({unsafeCleanup: true})
+  var db = new DB(dir.name)
+  var i = 0
+  db.on('metadata', (meta) => {
+    if (i === 0) {
+      t.same(meta, {key: db.metadataFeed.key.toString('hex')}, 'first metadata event')
+      i++
+    } else {
+      t.same(meta, {
+        key: db.metadataFeed.key.toString('hex'),
+        foo: 'bar'
+      }, 'second metadata event')
+      t.end()
+    }
+  })
+  db.open(test)
+
+  function test () {
+    db.setMetadata(Object.assign({}, db.metadata, {foo: 'bar'}), function (err) {
+      t.error(err)
+      t.same(db.metadata, {key: db.metadataFeed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
     })
   }
 })
@@ -67,7 +93,7 @@ tape('update metadata & replicate', function (t) {
 
     clone.on('metadata', (metadata) => {
       console.log(metadata)
-      t.same(db.metadata, {key: db.metadata.key.toString('hex'), foo: 'bar'}, 'metadata updated')
+      t.same(db.metadata, {key: db.metadataFeed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
       dir.removeCallback()
       t.end()
     })
