@@ -10,14 +10,14 @@ if (!dbPath) throw new Error('path is required')
 mkdirp(dbPath, function (err) {
   if (err) throw err
   var db = new ReplayDB(dbPath)
-  var app = db.server()
   var port = argv.port || 8080
   db.open(function () {
     console.log('key', db.feed.key.toString('hex'))
     swarm(db.feed, {live: true})
-  })
-  db.feed.on('upload', (i, d) => { console.log('uploaded', i, d.length) })
-  app.listen(port, () => {
-    console.log('listening at', port)
+    var app = db.server()
+    app.listen(port, () => {
+      console.log('listening at', port)
+    })
+    db.feed.on('upload', (i, d) => { console.log('uploaded', i, d.length) })
   })
 })

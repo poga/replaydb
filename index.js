@@ -140,7 +140,7 @@ ReplayDB.prototype.server = function (cb) {
     console.log('live')
     var listener = (data) => {
       console.log('live', data.length)
-      ws.send(data)
+      ws.send(data.toString())
     }
     self.on('flush', listener)
     ws.on('close', () => {
