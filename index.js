@@ -122,16 +122,16 @@ ReplayDB.prototype.flushNow = function () {
   })
 }
 
-ReplayDB.prototype.server = function (cb) {
+ReplayDB.prototype.routes = function (cb) {
   this._checkReady()
 
-  var app = this.app = express()
+  var route = express.Router()
   var self = this
-  require('express-ws')(app)
+  require('express-ws')(route)
 
-  app.use(bodyParser.json())
+  route.use(bodyParser.json())
 
-  app.post('/', function (req, res) {
+  route.post('/', function (req, res) {
     if (Array.isArray(req.body)) {
       req.body.forEach(x => { self.append(x) })
     } else {
@@ -140,7 +140,7 @@ ReplayDB.prototype.server = function (cb) {
     res.json({status: 'ok'})
   })
 
-  app.ws('/live', function (ws, res) {
+  route.ws('/live', function (ws, res) {
     console.log('live')
     var listener = (data) => {
       console.log('live', data.length)
@@ -153,12 +153,12 @@ ReplayDB.prototype.server = function (cb) {
     })
   })
 
-  app.use(function (err, req, res, next) {
+  route.use(function (err, req, res, next) {
     console.error(err.stack)
     res.status(500).send('Something went wrong')
   })
 
-  return app
+  return route
 }
 
 ReplayDB.prototype._checkReady = function () {

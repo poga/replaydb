@@ -2,6 +2,8 @@ const argv = require('minimist')(process.argv.slice(2))
 const ReplayDB = require('.')
 const mkdirp = require('mkdirp')
 const swarm = require('hyperdiscovery')
+const express = require('express')
+const expressWs = require('express-ws')
 
 const dbPath = argv._[0]
 
@@ -14,7 +16,9 @@ mkdirp(dbPath, function (err) {
   db.open(function () {
     console.log('key', db.feed.key.toString('hex'))
     swarm(db.feed, {live: true})
-    var app = db.server()
+    var app = express()
+    expressWs(app)
+    app.use('/lass', db.routes())
     app.listen(port, () => {
       console.log('listening at', port)
     })
