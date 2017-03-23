@@ -3,8 +3,6 @@ const DB = require('..')
 const request = require('superagent')
 const tmp = require('tmp')
 const WebSocket = require('ws')
-const express = require('express')
-const expressWs = require('express-ws')
 
 tape('post', function (t) {
   var dir = tmp.dirSync()
@@ -20,8 +18,7 @@ tape('post', function (t) {
   })
 
   function test () {
-    var app = express()
-    app.use('/', db.routes())
+    var app = db.server()
     server = app.listen(9090, function () {
       request
       .post('http://localhost:9090/')
@@ -44,9 +41,7 @@ tape('ws', function (t) {
   var server
 
   function test () {
-    var app = express()
-    expressWs(app)
-    app.use('/', db.routes())
+    var app = db.server()
     server = app.listen(9090, function () {
       var socket = new WebSocket('ws://localhost:9090/live')
       socket.on('message', x => {
