@@ -131,12 +131,16 @@ ReplayDB.prototype.server = function (cb) {
 
   app.use(bodyParser.json())
 
-  app.post('/:topic', function (req, res) {
-    self.append(req.body)
+  app.post('/', function (req, res) {
+    if (Array.isArray(req.body)) {
+      req.body.forEach(x => { self.append(x) })
+    } else {
+      self.append(req.body)
+    }
     res.json({status: 'ok'})
   })
 
-  app.ws('/live/:topic', function (ws, res) {
+  app.ws('/live', function (ws, res) {
     console.log('live')
     var listener = (data) => {
       console.log('live', data.length)
