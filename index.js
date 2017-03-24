@@ -140,7 +140,7 @@ ReplayDB.prototype.server = function (cb) {
     res.json({status: 'ok'})
   })
 
-  app.ws('/live', function (ws, res) {
+  app.ws('/ws', function (ws, res) {
     console.log('live')
     var listener = (data) => {
       console.log('live', data.length)
