@@ -37,7 +37,6 @@ tape('update metadata', function (t) {
   db.open(test)
 
   function test () {
-    console.log('test')
     db.setMetadata(Object.assign({}, db.metadata, {foo: 'bar'}), function (err) {
       t.error(err)
       t.same(db.metadata, {feed: db.feed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
@@ -85,16 +84,11 @@ tape('update metadata & replicate', function (t) {
   })
 
   function test () {
-    console.log('test')
-    console.log(clone.metadataFeed.length)
-
     db.setMetadata(Object.assign({}, db.metadata, {foo: 'bar'}), function (err) {
       t.error(err)
-      console.log('set done')
     })
 
     clone.on('metadata', (metadata) => {
-      console.log(metadata)
       t.same(db.metadata, {feed: db.feed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
       dir.removeCallback()
       t.end()

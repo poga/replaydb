@@ -46,7 +46,6 @@ ReplayDB.prototype.open = function (cb) {
   mkdirp(this.metadataPath(), function () { self.metadataFeed.ready(ready) })
 
   function ready () {
-    console.log('ready', self.metadataFeed.length, self.metadataFeed.writable)
     self.metadataFeed.on('error', (err) => { self.emit('metadata error', err) })
     if (self.metadataFeed.length === 0 && self.metadataFeed.writable) return init(cb)
 
@@ -59,15 +58,12 @@ ReplayDB.prototype.open = function (cb) {
   })
 
   function readMetadata () {
-    console.log('reading metadata')
     var rs = self.metadataFeed.createReadStream({live: true})
     var i = 0
     rs.on('data', patches => {
       var p = JSON.parse(patches)
       jsonpatch.apply(self.metadata, p)
       i += 1
-      console.log('read', p, i)
-      console.log('emitting metadata', self.metadata, self.feed)
 
       if (i === self.metadataFeed.length) {
         if (!self.feed) {
@@ -83,7 +79,6 @@ ReplayDB.prototype.open = function (cb) {
   }
 
   function init (cb) {
-    console.log('init')
     readMetadata()
     self.feed = hypercore(self.feedPath())
     self.feed.ready(() => {
@@ -95,30 +90,27 @@ ReplayDB.prototype.open = function (cb) {
 }
 
 ReplayDB.prototype.setMetadata = function (meta, cb) {
-  console.log('setting metadata', meta, cb)
   var diff = jsonpatch.compare(this.metadata, meta)
   this.metadataFeed.append(JSON.stringify(diff), err => {
     if (err) return cb(err)
     this.once('metadata', (metadata) => { cb(null, metadata) })
-    console.log('done', err, this.metadata)
   })
 }
 
 ReplayDB.prototype.append = function (object) {
   this._checkReady()
-  this.buffer = Buffer.concat([this.buffer, new Buffer(JSON.stringify(object) + '\n')])
+  var row = {timestamp: Date.now(), data: object}
+  this.buffer = Buffer.concat([this.buffer, new Buffer(JSON.stringify(row) + '\n')])
   this.flush()
 }
 
 ReplayDB.prototype.flushNow = function () {
-  console.log(this.buffer.toString().split('\n').length, 'flushed')
   var temp = Buffer.from(this.buffer)
   this.buffer = new Buffer(0)
   this.feed.append(temp, (err) => {
     if (err) return this.emit('error', err)
 
     this.emit('flush', temp)
-    console.log('append done')
   })
 }
 
@@ -141,14 +133,11 @@ ReplayDB.prototype.server = function (cb) {
   })
 
   app.ws('/ws', function (ws, res) {
-    console.log('live')
     var listener = (data) => {
-      console.log('live', data.length)
       ws.send(data.toString())
     }
     self.on('flush', listener)
     ws.on('close', () => {
-      console.log('close')
       self.removeListener('flush', listener)
     })
   })

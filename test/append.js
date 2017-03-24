@@ -11,7 +11,7 @@ tape('append 1 flush 1', function (t) {
   function test () {
     db.append({foo: 'bar'})
     db.on('flush', buf => {
-      t.same(JSON.parse(buf), {foo: 'bar'})
+      t.same(JSON.parse(buf).data, {foo: 'bar'})
       dir.removeCallback()
       t.end()
     })
@@ -31,7 +31,7 @@ tape('append n flush 1', function (t) {
     }
     db.on('flush', buf => {
       var objects = buf.toString().trim().split('\n').map(x => JSON.parse(x))
-      t.same(objects, [
+      t.same(objects.map(x => x.data), [
         {foo: 'bar0'},
         {foo: 'bar1'},
         {foo: 'bar2'},
@@ -57,10 +57,10 @@ tape('append 2 flush 2', function (t) {
     var iter = 0
     db.on('flush', buf => {
       if (iter === 0) {
-        t.same(JSON.parse(buf), {foo: 'bar'})
+        t.same(JSON.parse(buf).data, {foo: 'bar'})
         iter++
       } else {
-        t.same(JSON.parse(buf), {foo: 'baz'})
+        t.same(JSON.parse(buf).data, {foo: 'baz'})
         dir.removeCallback()
         t.end()
       }
@@ -85,7 +85,7 @@ tape('replicate & append 1 flush 1', function (t) {
     db.on('flush', buf => {
       clone.feed.get(0, function (err, data) {
         t.error(err)
-        t.same(JSON.parse(data), {foo: 'bar'})
+        t.same(JSON.parse(data).data, {foo: 'bar'})
         dir.removeCallback()
         t.end()
       })

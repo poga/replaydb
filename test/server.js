@@ -12,7 +12,7 @@ tape('post', function (t) {
   var server
 
   db.once('flush', data => {
-    t.same(JSON.parse(data), {foo: 'bar'})
+    t.same(JSON.parse(data).data, {foo: 'bar'})
     t.end()
     server.close()
   })
@@ -43,9 +43,9 @@ tape('ws', function (t) {
   function test () {
     var app = db.server()
     server = app.listen(9090, function () {
-      var socket = new WebSocket('ws://localhost:9090/live')
+      var socket = new WebSocket('ws://localhost:9090/ws')
       socket.on('message', x => {
-        t.same(JSON.parse(x), {foo: 'bar'})
+        t.same(JSON.parse(x).data, {foo: 'bar'})
         server.close()
         t.end()
         socket.close()
