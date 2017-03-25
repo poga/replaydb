@@ -79,7 +79,7 @@ tape('update metadata & replicate', function (t) {
   var dirClone = tmp.dirSync({unsafeCleanup: true})
   db.open(function () {
     clone = new DB(dirClone.name, db.metadataFeed.key)
-    replicate(db.metadataFeed, clone.metadataFeed)
+    replicate(db.metadataFeed.feed, clone.metadataFeed.feed)
     clone.open(test)
   })
 

@@ -74,8 +74,8 @@ tape('replicate & append 1 flush 1', function (t) {
   var clone
   db.open(function () {
     var clonePath = tmp.dirSync({unsafeCleanup: true})
-    clone = new DB(clonePath.name, db.metadataFeed.key)
-    replicate(db.metadataFeed, clone.metadataFeed, {live: true})
+    clone = new DB(clonePath.name, db.metadataFeed.feed.key)
+    replicate(db.metadataFeed.feed, clone.metadataFeed.feed, {live: true})
     clone.open(test)
   })
 
