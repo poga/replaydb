@@ -7,7 +7,7 @@ const inherits = require('inherits')
 const assert = require('assert')
 const path = require('path')
 const mkdirp = require('mkdirp')
-const JSONFeed = require('json-feed')
+const ObjectFeed = require('object-feed')
 
 const DEFAULT_OPTS = {wait: 1000, maxWait: 5000}
 
@@ -25,7 +25,7 @@ function ReplayDB (storage, key, opts) {
   this.buffer = new Buffer(0)
   this.flush = _.debounce(this.flushNow, opts.wait, {maxWait: opts.maxWait})
   this.ready = false
-  this.metadataFeed = new JSONFeed(this.metadataPath(), key)
+  this.metadataFeed = new ObjectFeed(this.metadataPath(), key)
   this.metadata = {} // aggregated matadata JSON
   this.feed = undefined
 }

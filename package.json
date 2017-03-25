@@ -22,10 +22,10 @@
     "hypercore": "^5.4.2",
     "hyperdiscovery": "^1.2.0",
     "inherits": "^2.0.3",
-    "json-feed": "^2.0.0",
     "lodash": "^4.17.4",
     "minimist": "^1.2.0",
     "mkdirp": "^0.5.1",
+    "object-feed": "^1.0.0",
     "uint64be": "^2.0.1"
   },
   "devDependencies": {
