@@ -18,6 +18,21 @@ tape('append 1 flush 1', function (t) {
   }
 })
 
+tape('append & index', function (t) {
+  var dir = tmp.dirSync()
+  var db = new DB(dir.name, {wait: 100})
+  db.open(test)
+
+  function test () {
+    db.append({foo: 'bar'})
+    db.on('flush', buf => {
+      t.equal(db.metadata.index.length, 1)
+      t.equal(db.metadata.index[0].block, 0)
+      t.end()
+    })
+  }
+})
+
 tape('append n flush 1', function (t) {
   var dir = tmp.dirSync({unsafeCleanup: true})
   var db = new DB(dir.name, {wait: 100})
@@ -38,6 +53,9 @@ tape('append n flush 1', function (t) {
         {foo: 'bar3'},
         {foo: 'bar4'}
       ])
+      // one flush = one index
+      t.equal(db.metadata.index.length, 1)
+      t.equal(db.metadata.index[0].block, 0)
       dir.removeCallback()
       t.end()
     })
@@ -61,6 +79,10 @@ tape('append 2 flush 2', function (t) {
         iter++
       } else {
         t.same(JSON.parse(buf).data, {foo: 'baz'})
+      // two flush = one index
+        t.equal(db.metadata.index.length, 2)
+        t.equal(db.metadata.index[0].block, 0)
+        t.equal(db.metadata.index[1].block, 1)
         dir.removeCallback()
         t.end()
       }

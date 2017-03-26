@@ -22,7 +22,7 @@ function ReplayDB (storage, key, opts) {
   events.EventEmitter.call(this)
 
   this.path = storage
-  this.buffer = new Buffer(0)
+  this.buffer = []
   this.flush = _.debounce(this.flushNow, opts.wait, {maxWait: opts.maxWait})
   this.ready = false
   this.metadataFeed = new ObjectFeed(this.metadataPath(), key)
@@ -87,17 +87,25 @@ ReplayDB.prototype.setMetadata = function (meta, cb) {
 ReplayDB.prototype.append = function (object) {
   this._checkReady()
   var row = {timestamp: Date.now(), data: object}
-  this.buffer = Buffer.concat([this.buffer, new Buffer(JSON.stringify(row) + '\n')])
+  this.buffer.push(row)
   this.flush()
 }
 
 ReplayDB.prototype.flushNow = function () {
-  var temp = Buffer.from(this.buffer)
-  this.buffer = new Buffer(0)
+  var first = this.buffer[0]
+  var temp = Buffer.from(this.buffer.map(row => JSON.stringify(row)).join('\n'))
+  this.buffer = []
   this.feed.append(temp, (err) => {
     if (err) return this.emit('error', err)
 
-    this.emit('flush', temp)
+    var newMetadata = this.metadata
+    if (!newMetadata.index) newMetadata.index = []
+    newMetadata.index.push({ block: this.feed.length - 1, startAt: first.timestamp })
+    this.setMetadata(newMetadata, (err) => {
+      if (err) return this.emit('error', err)
+
+      this.emit('flush', temp)
+    })
   })
 }
 
