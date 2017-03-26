@@ -8,6 +8,9 @@ const assert = require('assert')
 const path = require('path')
 const mkdirp = require('mkdirp')
 const ObjectFeed = require('object-feed')
+const uuid = require('uuid/v4')
+const ndjson = require('ndjson')
+const through2 = require('through2')
 
 const DEFAULT_OPTS = {wait: 1000, maxWait: 5000}
 
@@ -86,27 +89,59 @@ ReplayDB.prototype.setMetadata = function (meta, cb) {
 
 ReplayDB.prototype.append = function (object) {
   this._checkReady()
-  var row = {timestamp: Date.now(), data: object}
+  var row = {timestamp: Date.now(), ID: uuid(), data: object}
   this.buffer.push(row)
   this.flush()
 }
 
 ReplayDB.prototype.flushNow = function () {
   var first = this.buffer[0]
-  var temp = Buffer.from(this.buffer.map(row => JSON.stringify(row)).join('\n'))
+  var temp = this.buffer
+  var tempBuffer = Buffer.from(this.buffer.map(row => JSON.stringify(row)).join('\n'))
   this.buffer = []
-  this.feed.append(temp, (err) => {
+  this.feed.append(tempBuffer, (err) => {
     if (err) return this.emit('error', err)
 
     var newMetadata = this.metadata
     if (!newMetadata.index) newMetadata.index = []
-    newMetadata.index.push({ block: this.feed.length - 1, startAt: first.timestamp })
+    newMetadata.index.push({block: this.feed.length - 1, startAt: first.timestamp})
     this.setMetadata(newMetadata, (err) => {
       if (err) return this.emit('error', err)
 
       this.emit('flush', temp)
     })
   })
+}
+
+ReplayDB.prototype.createReadStream = function (opts) {
+  var startBlock
+  if (!opts) opts = {}
+  if (!opts.startAt) {
+    startBlock = 0
+  } else {
+    for (var i = 0; i < this.metadata.index.length; i++) {
+      var idx = this.metadata.index[i]
+      if (idx.startAt < opts.startAt) {
+        startBlock = idx.block
+      } else {
+        break
+      }
+    }
+  }
+
+  if (startBlock === undefined) throw new Error('timestamp not found')
+
+  var IDpassed = false
+  if (!opts.startFromID) IDpassed = true
+
+  var rs = this.feed.createReadStream({start: startBlock, snapshot: false})
+  return rs
+    .pipe(ndjson.parse())
+    .pipe(through2.obj(function (chunk, enc, cb) {
+      if (opts.startFromID && chunk.ID === opts.startFromID) IDpassed = true
+      if (!opts.startAt || chunk.timestamp >= opts.startAt && IDpassed) this.push(chunk)
+      cb()
+    }))
 }
 
 ReplayDB.prototype.server = function (cb) {
@@ -129,7 +164,7 @@ ReplayDB.prototype.server = function (cb) {
 
   app.ws('/ws', function (ws, res) {
     var listener = (data) => {
-      ws.send(data.toString())
+      ws.send(JSON.stringify(data))
     }
     self.on('flush', listener)
     ws.on('close', () => {

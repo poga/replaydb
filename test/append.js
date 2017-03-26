@@ -11,7 +11,7 @@ tape('append 1 flush 1', function (t) {
   function test () {
     db.append({foo: 'bar'})
     db.on('flush', buf => {
-      t.same(JSON.parse(buf).data, {foo: 'bar'})
+      t.same(buf[0].data, {foo: 'bar'})
       dir.removeCallback()
       t.end()
     })
@@ -45,8 +45,7 @@ tape('append n flush 1', function (t) {
       db.append({foo: 'bar' + i})
     }
     db.on('flush', buf => {
-      var objects = buf.toString().trim().split('\n').map(x => JSON.parse(x))
-      t.same(objects.map(x => x.data), [
+      t.same(buf.map(x => x.data), [
         {foo: 'bar0'},
         {foo: 'bar1'},
         {foo: 'bar2'},
@@ -75,10 +74,10 @@ tape('append 2 flush 2', function (t) {
     var iter = 0
     db.on('flush', buf => {
       if (iter === 0) {
-        t.same(JSON.parse(buf).data, {foo: 'bar'})
+        t.same(buf[0].data, {foo: 'bar'})
         iter++
       } else {
-        t.same(JSON.parse(buf).data, {foo: 'baz'})
+        t.same(buf[0].data, {foo: 'baz'})
       // two flush = one index
         t.equal(db.metadata.index.length, 2)
         t.equal(db.metadata.index[0].block, 0)
