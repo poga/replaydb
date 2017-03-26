@@ -11,6 +11,8 @@ tape('append 1 flush 1', function (t) {
   function test () {
     db.append({foo: 'bar'})
     db.on('flush', buf => {
+      t.ok(buf[0].timestamp)
+      t.ok(buf[0].ID)
       t.same(buf[0].data, {foo: 'bar'})
       dir.removeCallback()
       t.end()
@@ -18,7 +20,7 @@ tape('append 1 flush 1', function (t) {
   }
 })
 
-tape('append & index', function (t) {
+tape('append & update metadata', function (t) {
   var dir = tmp.dirSync()
   var db = new DB(dir.name, {wait: 100})
   db.open(test)
@@ -74,9 +76,13 @@ tape('append 2 flush 2', function (t) {
     var iter = 0
     db.on('flush', buf => {
       if (iter === 0) {
+        t.ok(buf[0].timestamp)
+        t.ok(buf[0].ID)
         t.same(buf[0].data, {foo: 'bar'})
         iter++
       } else {
+        t.ok(buf[0].timestamp)
+        t.ok(buf[0].ID)
         t.same(buf[0].data, {foo: 'baz'})
       // two flush = one index
         t.equal(db.metadata.index.length, 2)

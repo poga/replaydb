@@ -2,7 +2,6 @@
 const tape = require('tape')
 const DB = require('..')
 const tmp = require('tmp')
-const replicate = require('./helpers/replicate')
 const collect = require('collect-stream')
 
 tape('createReadStream', function (t) {
