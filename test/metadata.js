@@ -4,19 +4,18 @@ const tmp = require('tmp')
 const replicate = require('./helpers/replicate')
 
 tape('init metadata', function (t) {
-  var dir = tmp.dirSync({unsafeCleanup: true})
+  var dir = tmp.dirSync()
   var db = new DB(dir.name)
   db.open(test)
 
   function test () {
     t.same(db.metadata.feed, db.feed.key.toString('hex'), 'metadata should be inited')
-    dir.removeCallback()
     t.end()
   }
 })
 
 tape('read metadata', function (t) {
-  var dir = tmp.dirSync({unsafeCleanup: true})
+  var dir = tmp.dirSync()
   var db = new DB(dir.name)
   db.open(test)
 
@@ -25,14 +24,13 @@ tape('read metadata', function (t) {
     db2.open(function () {
       t.same(db2.metadata, db.metadata, 'read metadata after open')
       t.same(db2.feed.key, db.feed.key)
-      dir.removeCallback()
       t.end()
     })
   }
 })
 
 tape('update metadata', function (t) {
-  var dir = tmp.dirSync({unsafeCleanup: true})
+  var dir = tmp.dirSync()
   var db = new DB(dir.name)
   db.open(test)
 
@@ -40,14 +38,13 @@ tape('update metadata', function (t) {
     db.setMetadata(Object.assign({}, db.metadata, {foo: 'bar'}), function (err) {
       t.error(err)
       t.same(db.metadata, {feed: db.feed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
-      dir.removeCallback()
       t.end()
     })
   }
 })
 
 tape('emit metadata event', function (t) {
-  var dir = tmp.dirSync({unsafeCleanup: true})
+  var dir = tmp.dirSync()
   var db = new DB(dir.name)
   var i = 0
   db.on('metadata', (meta) => {
@@ -73,10 +70,10 @@ tape('emit metadata event', function (t) {
 })
 
 tape('update metadata & replicate', function (t) {
-  var dir = tmp.dirSync({unsafeCleanup: true})
+  var dir = tmp.dirSync()
   var db = new DB(dir.name)
   var clone
-  var dirClone = tmp.dirSync({unsafeCleanup: true})
+  var dirClone = tmp.dirSync()
   db.open(function () {
     clone = new DB(dirClone.name, db.metadataFeed.key)
     replicate(db.metadataFeed.feed, clone.metadataFeed.feed)
@@ -90,7 +87,6 @@ tape('update metadata & replicate', function (t) {
 
     clone.on('metadata', (metadata) => {
       t.same(db.metadata, {feed: db.feed.key.toString('hex'), foo: 'bar'}, 'metadata updated')
-      dir.removeCallback()
       t.end()
     })
   }
