@@ -16,17 +16,13 @@ $ replaydb path [key] [--port=8080]
 
 ## Interface
 
-#### `GET /:topic/:offset`
+#### `POST /`
 
-Return the message with given offset in the specified topic.
+Append a new message (passed by post body).
 
-#### `POST /:topic`
+#### `ws://<HOST>/ws`
 
-Append a new message (passed by post body) to the topic.
-
-#### `ws://<HOST>/live/:topic/:offset`
-
-Return and listen all messages after the given offset in the specified topic with websocket.
+Return and listen all new messages with websocket.
 
 ## License
 

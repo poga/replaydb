@@ -96,6 +96,7 @@ ReplayDB.prototype.append = function (object) {
 
 ReplayDB.prototype.flushNow = function () {
   var first = this.buffer[0]
+  var last = this.buffer[this.buffer.length - 1]
   var temp = this.buffer
   var tempBuffer = Buffer.from(this.buffer.map(row => JSON.stringify(row)).join('\n'))
   this.buffer = []
@@ -104,13 +105,28 @@ ReplayDB.prototype.flushNow = function () {
 
     var newMetadata = this.metadata
     if (!newMetadata.index) newMetadata.index = []
-    newMetadata.index.push({block: this.feed.length - 1, startAt: first.timestamp})
+    newMetadata.index.push({block: this.feed.length - 1, startAt: first.timestamp, endAt: last.timestamp})
     this.setMetadata(newMetadata, (err) => {
       if (err) return this.emit('error', err)
 
       this.emit('flush', temp)
     })
   })
+}
+
+// returns the index of the block containing specified time
+ReplayDB.prototype.findBlock = function (timestamp) {
+  var indices = this.metadata.index
+  var b
+  for (var i = 0; i < indices.length; i++) {
+    console.log(timestamp, indices[i])
+    if (indices[i].startAt <= timestamp && indices[i].endAt >= timestamp) {
+      b = indices[i].block
+      break
+    }
+  }
+
+  return b
 }
 
 ReplayDB.prototype.createReadStream = function (opts) {
@@ -139,7 +155,7 @@ ReplayDB.prototype.createReadStream = function (opts) {
     .pipe(ndjson.parse())
     .pipe(through2.obj(function (chunk, enc, cb) {
       if (opts.startFromID && chunk.ID === opts.startFromID) IDpassed = true
-      if (!opts.startAt || chunk.timestamp >= opts.startAt && IDpassed) this.push(chunk)
+      if (IDpassed && (!opts.startAt || chunk.timestamp >= opts.startAt)) this.push(chunk)
       cb()
     }))
 }

@@ -19,6 +19,29 @@ tape('append 1 flush 1', function (t) {
   }
 })
 
+tape('append 1 flush 1 & find', function (t) {
+  var dir = tmp.dirSync()
+  var db = new DB(dir.name, {wait: 100})
+  db.open(test)
+
+  function test () {
+    db.append({foo: 'bar'})
+    db.on('flush', buf => {
+      var ts = buf[0].timestamp
+      t.ok(ts)
+      t.ok(buf[0].ID)
+      t.same(buf[0].data, {foo: 'bar'})
+      var blockID = db.findBlock(ts)
+      t.equal(blockID, 0)
+      blockID = db.findBlock(ts + 1)
+      t.equal(blockID, undefined)
+      blockID = db.findBlock(ts - 1)
+      t.equal(blockID, undefined)
+      t.end()
+    })
+  }
+})
+
 tape('append & update metadata', function (t) {
   var dir = tmp.dirSync()
   var db = new DB(dir.name, {wait: 100})
@@ -29,6 +52,8 @@ tape('append & update metadata', function (t) {
     db.on('flush', buf => {
       t.equal(db.metadata.index.length, 1)
       t.equal(db.metadata.index[0].block, 0)
+      t.ok(db.metadata.index[0].startAt, 0)
+      t.ok(db.metadata.index[0].endAt, 0)
       t.end()
     })
   }
