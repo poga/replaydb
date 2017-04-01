@@ -98,7 +98,7 @@ ReplayDB.prototype.flushNow = function () {
   var first = this.buffer[0]
   var last = this.buffer[this.buffer.length - 1]
   var temp = this.buffer
-  var tempBuffer = Buffer.from(this.buffer.map(row => JSON.stringify(row)).join('\n'))
+  var tempBuffer = Buffer.from(this.buffer.map(row => JSON.stringify(row)).join('\n') + '\n')
   this.buffer = []
   this.feed.append(tempBuffer, (err) => {
     if (err) return this.emit('error', err)
@@ -119,7 +119,6 @@ ReplayDB.prototype.findBlock = function (timestamp) {
   var indices = this.metadata.index
   var b
   for (var i = 0; i < indices.length; i++) {
-    console.log(timestamp, indices[i])
     if (indices[i].startAt <= timestamp && indices[i].endAt >= timestamp) {
       b = indices[i].block
       break
@@ -130,16 +129,13 @@ ReplayDB.prototype.findBlock = function (timestamp) {
 }
 
 ReplayDB.prototype.createReadStream = function (opts) {
-  var startBlock
+  var startBlock = 0
   if (!opts) opts = {}
-  if (!opts.startAt) {
-    startBlock = 0
-  } else {
+  if (opts.startAt) {
     for (var i = 0; i < this.metadata.index.length; i++) {
       var idx = this.metadata.index[i]
-      if (idx.startAt < opts.startAt) {
+      if (idx.startAt <= opts.startAt && idx.endAt >= opts.startAt) {
         startBlock = idx.block
-      } else {
         break
       }
     }
@@ -147,15 +143,15 @@ ReplayDB.prototype.createReadStream = function (opts) {
 
   if (startBlock === undefined) throw new Error('timestamp not found')
 
-  var IDpassed = false
-  if (!opts.startFromID) IDpassed = true
+  var newData = false
+  if (!opts.lastReceived) newData = true
 
   var rs = this.feed.createReadStream({start: startBlock, snapshot: false})
   return rs
     .pipe(ndjson.parse())
     .pipe(through2.obj(function (chunk, enc, cb) {
-      if (opts.startFromID && chunk.ID === opts.startFromID) IDpassed = true
-      if (IDpassed && (!opts.startAt || chunk.timestamp >= opts.startAt)) this.push(chunk)
+      if (opts.lastReceived && chunk.ID === opts.lastReceived) newData = true
+      if (newData && (!opts.startAt || chunk.timestamp >= opts.startAt)) this.push(chunk)
       cb()
     }))
 }
