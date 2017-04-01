@@ -176,7 +176,7 @@ ReplayDB.prototype.server = function (cb) {
 
   app.ws('/ws', function (ws, res) {
     var listener = (data) => {
-      ws.send(JSON.stringify(data))
+      data.forEach(x => { ws.send(JSON.stringify(x)) })
     }
     self.on('flush', listener)
     ws.on('close', () => {
