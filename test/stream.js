@@ -106,3 +106,42 @@ tape('createReadStream with startAt & start at middle of a block', function (t) 
     })
   }
 })
+
+tape('createReadStream with future startAt', function (t) {
+  var dir = tmp.dirSync()
+  var db = new DB(dir.name, {wait: 100})
+  db.open(test)
+
+  function test () {
+    db.append({foo: 'bar1'})
+    db.append({foo: 'bar2'})
+    db.append({foo: 'bar3'})
+    db.append({foo: 'bar4'})
+
+    db.on('flush', buf => {
+      var rs = db.createReadStream({startAt: Date.now() + 1000})
+      collect(rs, function (err, data) {
+        t.error(err)
+        t.equal(data.length, 0)
+        t.same(data.map(x => x.data.foo), [])
+        t.end()
+      })
+    })
+  }
+})
+
+tape('createReadStream with future startAt, live == true', function (t) {
+  var dir = tmp.dirSync()
+  var db = new DB(dir.name, {wait: 100})
+  db.open(test)
+
+  function test () {
+    var rs = db.createReadStream({startAt: Date.now(), live: true})
+    rs.on('data', x => {
+      t.same(x.data, {foo: 'bar5'})
+      t.end()
+    })
+
+    db.append({foo: 'bar5'})
+  }
+})

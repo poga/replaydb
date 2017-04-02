@@ -131,9 +131,10 @@ ReplayDB.prototype.findBlock = function (timestamp) {
 ReplayDB.prototype.createReadStream = function (opts) {
   var startBlock = 0
   if (!opts) opts = {}
+  var index = this.metadata.index || []
   if (opts.startAt) {
-    for (var i = 0; i < this.metadata.index.length; i++) {
-      var idx = this.metadata.index[i]
+    for (var i = 0; i < index.length; i++) {
+      var idx = index[i]
       if (idx.startAt <= opts.startAt && idx.endAt >= opts.startAt) {
         startBlock = idx.block
         break
@@ -141,12 +142,10 @@ ReplayDB.prototype.createReadStream = function (opts) {
     }
   }
 
-  if (startBlock === undefined) throw new Error('timestamp not found')
-
   var newData = false
   if (!opts.lastReceived) newData = true
 
-  var rs = this.feed.createReadStream({start: startBlock, snapshot: false})
+  var rs = this.feed.createReadStream({start: startBlock, snapshot: false, live: opts.live})
   return rs
     .pipe(ndjson.parse())
     .pipe(through2.obj(function (chunk, enc, cb) {
@@ -174,13 +173,14 @@ ReplayDB.prototype.server = function (cb) {
     res.json({status: 'ok'})
   })
 
-  app.ws('/ws', function (ws, res) {
-    var listener = (data) => {
-      data.forEach(x => { ws.send(JSON.stringify(x)) })
-    }
-    self.on('flush', listener)
+  app.ws('/ws/:startAt', function (ws, req) {
+    var startAt = req.params.startAt || 0
+    var rs = self.createReadStream({startAt, live: true})
+    rs.on('data', x => {
+      ws.send(JSON.stringify(x))
+    })
     ws.on('close', () => {
-      self.removeListener('flush', listener)
+      rs.end()
     })
   })
 
